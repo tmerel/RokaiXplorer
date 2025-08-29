@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# rip.sh - simple R package installer with error tracking
+# Supports --lib and --repos overrides
+
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 [--lib /path/to/lib] [--repos url] package1 [package2 ...]"
+  exit 1
+fi
+
+# Defaults
+DEFAULT_LIB="/usr/local/lib/R/site-library"
+DEFAULT_REPOS="https://cran.r-project.org"
+
+LIB="$DEFAULT_LIB"
+REPOS="$DEFAULT_REPOS"
+
+# Parse args
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --lib)
+      LIB="$2"
+      shift 2
+      ;;
+    --repos)
+      REPOS="$2"
+      shift 2
+      ;;
+    --*)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ $# -eq 0 ]; then
+  echo "ERROR: No packages specified"
+  exit 1
+fi
+
+PACKAGES=$(printf '"%s",' "$@")
+PACKAGES="c(${PACKAGES%,})"
+
+# Ensure library dir exists
+if [ ! -d "$LIB" ]; then
+  echo "Creating library directory: $LIB"
+  sudo mkdir -p "$LIB"
+  sudo chown -R "$(whoami)" "$LIB"
+fi
+
+# Run R script safely (single quotes around code)
+Rscript --vanilla -e '
+pkgs <- '"$PACKAGES"'
+repos <- "'"$REPOS"'"
+lib <- "'"$LIB"'"
+
+for (p in pkgs) {
+  if (!requireNamespace(p, quietly = TRUE, lib.loc = lib)) {
+    message("Installing ", p, " into ", lib, " from ", repos, " ...")
+    tryCatch({
+      install.packages(p, repos = repos, lib = lib, dependencies = TRUE)
+      if (!requireNamespace(p, quietly = TRUE, lib.loc = lib)) {
+        stop("Package ", p, " failed to install")
+      }
+    }, error = function(e) {
+      message("ERROR: ", e$message)
+      quit(status = 1)
+    })
+  } else {
+    message("Package ", p, " already installed in ", lib)
+  }
+}
+' || {
+  echo "❌ Package installation failed"
+  exit 1
+}
+
+echo "✅ All packages installed successfully in $LIB (repos: $REPOS)"

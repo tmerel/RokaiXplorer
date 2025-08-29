@@ -29,6 +29,12 @@ options(shiny.maxRequestSize = 1000 * 1024^2)
 runGitHub("rokaixplorer", "serhan-yilmaz")
 ```
 
+or use the docker with linux, under docker folder
+```
+cd docker
+./run rokaixplorer
+```
+
 ## Share Your Discoveries with RokaiXplorer!
 RokaiXplorer allows you to easily share your datasets and analysis results online through an interactive data browser! Explore some examples below:
 

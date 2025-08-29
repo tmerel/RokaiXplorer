@@ -1,0 +1,34 @@
+#! /usr/bin/env bash
+
+readonly curr_dir="$(dirname ${0})"
+readonly tag="${1}"
+readonly force="${2}"
+
+[ -z "${tag}" ] && printf "usage: ${0} <TAG_NAME>\n\nTAG_NAME\ttag name under which the docker will be saved username/tag\n" && exit 0
+
+function setup() {
+
+    docker build ${curr_dir} -t "$(id -u -n)/${tag}" \
+            --build-arg  "USER_NAME=$(id -u -n)" \
+            --build-arg  "GROUP_NAME=$(id -g -n)" \
+            --build-arg  "GROUP_ID=$(id -g)" \
+            --build-arg  "USER_ID=$(id -u)" 
+}
+
+function run() {
+
+    docker run \
+        --mount "type=bind,source=$(realpath ${PWD}/..),destination=$(realpath ${PWD}/..),readonly=false" \
+        --mount "type=bind,source=${HOME}/.ssh,destination=${HOME}/.ssh,readonly=true" \
+        -w "${PWD}/../.." \
+        --net host \
+        --userns host \
+        --rm \
+        -it "$(id -u -n)/${tag}" /bin/bash
+}
+
+if [ -z "$(docker images -q "$(id -u -n)/${tag}" 2> /dev/null)" ] || [ -n "${force}" ]; then
+    setup
+fi
+
+run
