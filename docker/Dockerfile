@@ -75,4 +75,11 @@ RUN groupadd -f --gid ${GROUP_ID} ${GROUP_NAME} && \
 
 ENV EMAIL_AVAILABLE=0
 
-ENTRYPOINT ["/usr/bin/Rscript", "-e", "shiny::runApp('./RokaiXplorer', host='0.0.0.0', port=8000)"]
+#
+# options(shiny.maxRequestSize = 30000*1024^2,app_init_timeout=timeout,shiny.app_init_timeout=timeout,
+#        shiny.app_idle_timeout=timeout,app_connection_timeout=timeout,shiny.app_connection_timeout=timeout,
+#        app_read_timeout=timeout,shiny.app_read_timeout=timeout,app_idle_timeout=timeout)
+#
+ENTRYPOINT ["/usr/bin/Rscript", "-e", \
+  "options(shiny.app_idle_timeout = 0, shiny.app_connection_timeout=0); \
+  shiny::runApp('./RokaiXplorer', host='0.0.0.0', port=8000)"]
